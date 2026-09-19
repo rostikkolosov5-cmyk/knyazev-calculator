@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Лестница | Trading Risk Management Calculator</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              bg: '#0B0F12',
+              card: '#13191F',
+              'card-hover': '#182029',
+              input: '#0E1317',
+              border: 'rgba(0, 255, 102, 0.12)',
+              borderHover: 'rgba(0, 255, 102, 0.35)',
+              neon: '#00FF66',
+              neonGlow: '#00E5A3',
+              neonDark: '#00B347',
+              red: '#FF4B4B',
+              text: '#E2E8F0',
+              muted: '#8A99AD'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0B0F12;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1E2833;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00FF66;
+    }
+
+    /* Background Ambient Glows */
+    .bg-glow-1 {
+      position: fixed;
+      top: -10%;
+      left: -10%;
+      width: 50vw;
+      height: 50vw;
+      background: radial-gradient(circle, rgba(0, 255, 102, 0.07) 0%, rgba(0, 0, 0, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .bg-glow-2 {
+      position: fixed;
+      bottom: -15%;
+      right: -10%;
+      width: 60vw;
+      height: 60vw;
+      background: radial-gradient(circle, rgba(0, 229, 163, 0.05) 0%, rgba(0, 0, 0, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .bg-grid {
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    /* Glassmorphism Card Style */
+    .glass-card {
+      background: rgba(19, 25, 31, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 255, 102, 0.12);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+    .glass-card:hover {
+      border-color: rgba(0, 255, 102, 0.25);
+    }
+
+    .neon-text-glow {
+      text-shadow: 0 0 12px rgba(0, 255, 102, 0.4);
+    }
+
+    .neon-box-glow {
+      box-shadow: 0 0 20px rgba(0, 255, 102, 0.15);
+    }
+
+    /* Circular Progress Animation */
+    .circle-bg {
+      fill: none;
+      stroke: #1B242D;
+      stroke-width: 6;
+    }
+    .circle-progress {
+      fill: none;
+      stroke: url(#neonGradient);
+      stroke-width: 6;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.5s ease-in-out;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+
+    /* Hide standard HTML number input spinners */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+
+    /* Toast notification */
+    #toast {
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    }
+    #toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body class="bg-brand-bg text-brand-text font-sans antialiased min-h-screen relative overflow-x-hidden bg-grid selection:bg-brand-neon selection:text-black">
+
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <!-- Toast Container -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl bg-brand-card border border-brand-neon text-brand-neon font-medium text-sm shadow-2xl">
+    <i data-lucide="check-circle" class="w-5 h-5"></i>
+    <span id="toast-message">Результат скопирован!</span>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 py-6 md:py-10 relative z-10 space-y-8">
+
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/5">
+      <div class="flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-neon/20 via-brand-neonGlow/10 to-transparent border border-brand-neon/40 flex items-center justify-center text-brand-neon neon-box-glow">
+          <i data-lucide="crown" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-2xl md:text-3xl font-black tracking-wider text-white uppercase font-sans">
+              РОСТИCЛАВ <span class="text-brand-neon font-sans neon-text-glow">КНЯЗЕВ</span>
+            </h1>
+            <span class="px-2.5 py-0.5 text-[10px] font-mono tracking-widest bg-brand-neon/10 border border-brand-neon/30 text-brand-neon rounded-full font-bold uppercase">
+              ОФИЦИАЛЬНЫЙ РАСЧЁТ
+            </span>
+          </div>
+          <p class="text-xs text-brand-muted mt-0.5 flex items-center gap-1.5 font-medium">
+            <span>Калькулятор лестницы</span>
+            <span class="text-brand-neon/40">•</span>
+            <span class="text-gray-300">Авторская торговая модель риск-менеджмента</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Presets & Author Tag -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 self-start md:self-auto">
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-brand-muted font-medium hidden sm:inline">Пресеты:</span>
+          <button onclick="applyPreset('conservative')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-card hover:bg-brand-card-hover border border-brand-border hover:border-brand-neon/40 text-gray-300 hover:text-brand-neon transition-all">
+            🛡️ Консервативный
+          </button>
+          <button onclick="applyPreset('standard')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-card hover:bg-brand-card-hover border border-brand-border hover:border-brand-neon/40 text-gray-300 hover:text-brand-neon transition-all">
+            ⚡ Стандартный
+          </button>
+          <button onclick="applyPreset('aggressive')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-card hover:bg-brand-card-hover border border-brand-border hover:border-brand-neon/40 text-gray-300 hover:text-brand-neon transition-all">
+            🔥 Агрессивный
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- INPUT PARAMETERS SECTION -->
+    <section class="glass-card rounded-2xl p-5 md:p-6 transition-all">
+      <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center gap-2">
+          <i data-lucide="sliders" class="w-4 h-4 text-brand-neon"></i>
+          <h2 class="text-xs font-bold tracking-wider text-brand-muted uppercase font-mono">Параметры лестницы</h2>
+        </div>
+        <span class="text-[11px] text-brand-muted/70 flex items-center gap-1 font-mono">
+          <i data-lucide="zap" class="w-3 h-3 text-brand-neon"></i> Пересчитывается сразу при вводе
+        </span>
+      </div>
+
+      <!-- Inputs Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Input: Deposit -->
+        <div class="space-y-1.5">
+          <label for="deposit" class="text-xs text-brand-muted font-medium flex justify-between">
+            <span>Депозит</span>
+            <span class="text-brand-neon font-mono">$</span>
+          </label>
+          <div class="relative flex items-center">
+            <input type="number" id="deposit" value="1000" step="50" min="10" 
+              class="w-full bg-brand-input border border-brand-border rounded-xl px-3.5 py-2.5 text-sm font-mono font-semibold text-white focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon transition-all pr-12">
+            <span class="absolute right-3 text-xs text-brand-muted font-mono font-bold">$</span>
+          </div>
+        </div>
+
+        <!-- Input: Base Risk -->
+        <div class="space-y-1.5">
+          <label for="baseRisk" class="text-xs text-brand-muted font-medium flex justify-between">
+            <span>Базовый риск</span>
+            <span class="text-brand-neon font-mono">%</span>
+          </label>
+          <div class="relative flex items-center">
+            <input type="number" id="baseRisk" value="0.4" step="0.1" min="0.01" max="100" 
+              class="w-full bg-brand-input border border-brand-border rounded-xl px-3.5 py-2.5 text-sm font-mono font-semibold text-white focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon transition-all pr-12">
+            <span class="absolute right-3 text-xs text-brand-muted font-mono font-bold">%</span>
+          </div>
+        </div>
+
+        <!-- Input: Step Multiplier -->
+        <div class="space-y-1.5">
+          <label for="stepMultiplier" class="text-xs text-brand-muted font-medium flex justify-between">
+            <span>Множитель шага</span>
+            <span class="text-brand-neon font-mono">×</span>
+          </label>
+          <div class="relative flex items-center">
+            <input type="number" id="stepMultiplier" value="2" step="0.1" min="1" max="10" 
+              class="w-full bg-brand-input border border-brand-border rounded-xl px-3.5 py-2.5 text-sm font-mono font-semibold text-white focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon transition-all pr-12">
+            <span class="absolute right-3 text-xs text-brand-muted font-mono font-bold">×</span>
+          </div>
+        </div>
+
+        <!-- Input: Steps Count -->
+        <div class="space-y-1.5">
+          <label for="stepsCount" class="text-xs text-brand-muted font-medium flex justify-between">
+            <span>Ступеней в серии</span>
+            <span class="text-brand-neon font-mono">шаг</span>
+          </label>
+          <div class="relative flex items-center">
+            <input type="number" id="stepsCount" value="5" step="1" min="1" max="10" 
+              class="w-full bg-brand-input border border-brand-border rounded-xl px-3.5 py-2.5 text-sm font-mono font-semibold text-white focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon transition-all pr-14">
+            <span class="absolute right-3 text-xs text-brand-muted font-mono font-bold">шаг</span>
+          </div>
+        </div>
+
+        <!-- Input: Broker Payout -->
+        <div class="space-y-1.5">
+          <label for="brokerPayout" class="text-xs text-brand-muted font-medium flex justify-between">
+            <span>Выплата брокера</span>
+            <span class="text-brand-neon font-mono">%</span>
+          </label>
+          <div class="relative flex items-center">
+            <input type="number" id="brokerPayout" value="92" step="1" min="1" max="200" 
+              class="w-full bg-brand-input border border-brand-border rounded-xl px-3.5 py-2.5 text-sm font-mono font-semibold text-white focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon transition-all pr-12">
+            <span class="absolute right-3 text-xs text-brand-muted font-mono font-bold">%</span>
+          </div>
+        </div>
+
+        <!-- Input: Winrate -->
+        <div class="space-y-1.5">
+          <label for="winrate" class="text-xs text-brand-muted font-medium flex justify-between">
+            <span>Винрейт модели</span>
+            <span class="text-brand-neon font-mono">%</span>
+          </label>
+          <div class="relative flex items-center">
+            <input type="number" id="winrate" value="80" step="1" min="1" max="99" 
+              class="w-full bg-brand-input border border-brand-border rounded-xl px-3.5 py-2.5 text-sm font-mono font-semibold text-white focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon transition-all pr-12">
+            <span class="absolute right-3 text-xs text-brand-muted font-mono font-bold">%</span>
+          </div>
+        </div>
+
+        <!-- Input: Trades per Month -->
+        <div class="space-y-1.5 sm:col-span-2 lg:col-span-2">
+          <label for="tradesPerMonth" class="text-xs text-brand-muted font-medium flex justify-between">
+            <span>Сделок в месяц</span>
+            <span class="text-brand-neon font-mono">шт</span>
+          </label>
+          <div class="relative flex items-center">
+            <input type="number" id="tradesPerMonth" value="500" step="10" min="1" max="10000" 
+              class="w-full bg-brand-input border border-brand-border rounded-xl px-3.5 py-2.5 text-sm font-mono font-semibold text-white focus:outline-none focus:border-brand-neon focus:ring-1 focus:ring-brand-neon transition-all pr-14">
+            <span class="absolute right-3 text-xs text-brand-muted font-mono font-bold">шт</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- RESULT CALCULATION HERO CARD -->
+    <section class="glass-card rounded-2xl p-6 relative overflow-hidden transition-all border-brand-neon/20">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <i data-lucide="pie-chart" class="w-4 h-4 text-brand-neon"></i>
+          <h2 class="text-xs font-bold tracking-wider text-brand-muted uppercase font-mono">Результат расчёта серии</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-input border border-white/10 text-[11px] text-gray-300 font-mono">
+            <i data-lucide="user-check" class="w-3.5 h-3.5 text-brand-neon"></i> Модель: Р. Князев
+          </span>
+          <button onclick="copySummary()" class="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-brand-neon/10 border border-brand-neon/20 hover:border-brand-neon text-brand-neon text-xs font-medium transition-all">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            Скопировать итог
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-col md:flex-row items-center gap-6 lg:gap-10">
+        
+        <!-- Circular Progress Indicator -->
+        <div class="relative flex-shrink-0 flex items-center justify-center">
+          <svg class="w-32 h-32 md:w-36 md:h-36">
+            <defs>
+              <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00FF66" />
+                <stop offset="100%" stop-color="#00E5A3" />
+              </linearGradient>
+            </defs>
+            <circle class="circle-bg" cx="50%" cy="50%" r="58"></circle>
+            <circle id="progressCircle" class="circle-progress" cx="50%" cy="50%" r="58" stroke-dasharray="364.4" stroke-dashoffset="43.7"></circle>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+            <span id="circlePercent" class="text-2xl md:text-3xl font-extrabold font-mono text-white neon-text-glow">88%</span>
+            <span class="text-[10px] text-brand-muted font-medium max-w-[80px] leading-tight mt-0.5">депозита останется</span>
+          </div>
+        </div>
+
+        <!-- Main Textual Highlight -->
+        <div class="flex-grow text-center md:text-left space-y-3">
+          <h3 id="mainResultHeader" class="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight leading-snug">
+            После <span class="text-brand-neon font-mono">5</span> убытков подряд останется <span class="text-brand-neon font-mono neon-text-glow">$876</span>
+          </h3>
+          <p id="mainResultSubtext" class="text-xs md:text-sm text-brand-muted leading-relaxed max-w-2xl">
+            Суммарный убыток серии — <span class="text-white font-medium">$124 (12.4% депозита)</span>. После прибыльного закрытия любого шага или достижения лимита серия завершается; её итог записываем отдельно.
+          </p>
+
+          <!-- Quick Micro Metrics -->
+          <div class="pt-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div class="p-2.5 rounded-xl bg-brand-input/60 border border-white/5">
+              <span class="block text-[11px] text-brand-muted">Макс. риск серии</span>
+              <span id="metricMaxLoss" class="text-sm font-mono font-bold text-brand-red">$124.00</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-brand-input/60 border border-white/5">
+              <span class="block text-[11px] text-brand-muted">Вероятность слива</span>
+              <span id="metricBustProb" class="text-sm font-mono font-bold text-brand-neon">0.032%</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-brand-input/60 border border-white/5 col-span-2 sm:col-span-1">
+              <span class="block text-[11px] text-brand-muted">Ожидаемый EV / мес</span>
+              <span id="metricMonthlyEV" class="text-sm font-mono font-bold text-brand-neon">+$1,450.00</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- STEP-BY-STEP LADDER TABLE -->
+    <section class="glass-card rounded-2xl p-5 md:p-6 transition-all">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <i data-lucide="layers" class="w-4 h-4 text-brand-neon"></i>
+          <h2 class="text-xs font-bold tracking-wider text-brand-muted uppercase font-mono">Лестница по шагам</h2>
+        </div>
+        <span class="text-xs text-brand-muted font-mono hidden sm:inline">
+          Полоса — доля депозита, вложенная в этот шаг
+        </span>
+      </div>
+
+      <!-- Responsive Table Container -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-white/10 text-[11px] font-mono text-brand-muted uppercase tracking-wider">
+              <th class="py-3 px-3 font-semibold">ШАГ</th>
+              <th class="py-3 px-3 font-semibold text-right sm:text-left">ОБЪЁМ ВХОДА</th>
+              <th class="py-3 px-3 font-semibold min-w-[140px] hidden md:table-cell">ДОЛЯ ДЕПОЗИТА</th>
+              <th class="py-3 px-3 font-semibold text-right">ЕСЛИ СНОВА МИНУС</th>
+              <th class="py-3 px-3 font-semibold text-right">ЕСЛИ ЭТОТ ШАГ В ПЛЮС</th>
+            </tr>
+          </thead>
+          <tbody id="ladderTableBody" class="divide-y divide-white/5 text-xs md:text-sm font-mono">
+            <!-- Table rows dynamically populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ADVANCED ANALYTICS & EV PROJECTION CARD -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <!-- Card 1: Risk Safety Level -->
+      <div class="glass-card rounded-2xl p-5 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-brand-muted font-mono uppercase">Запас прочности</span>
+          <i data-lucide="shield-check" class="w-4 h-4 text-brand-neon"></i>
+        </div>
+        <div class="text-xl font-bold font-mono text-white" id="statSafetyMargin">8.0 серий</div>
+        <p class="text-[11px] text-brand-muted leading-relaxed">
+          Сколько полных убыточных серий подряд может выдержать ваш депозит до обнуления.
+        </p>
+      </div>
+
+      <!-- Card 2: Winrate vs Loss Probability -->
+      <div class="glass-card rounded-2xl p-5 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-brand-muted font-mono uppercase">Шанс успеха серии</span>
+          <i data-lucide="target" class="w-4 h-4 text-brand-neon"></i>
+        </div>
+        <div class="text-xl font-bold font-mono text-brand-neon" id="statSeriesWinrate">99.968%</div>
+        <p class="text-[11px] text-brand-muted leading-relaxed">
+          Вероятность хотя бы 1 прибыльной сделки из предложенной цепочки ступеней.
+        </p>
+      </div>
+
+      <!-- Card 3: Monthly Projection -->
+      <div class="glass-card rounded-2xl p-5 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-brand-muted font-mono uppercase">Прогноз ROI / Месяц</span>
+          <i data-lucide="trending-up" class="w-4 h-4 text-brand-neon"></i>
+        </div>
+        <div class="text-xl font-bold font-mono text-brand-neon" id="statMonthlyROI">+145.0%</div>
+        <p class="text-[11px] text-brand-muted leading-relaxed">
+          Теоретический прирост депозита с учётом винрейта и 500 сделок в месяц.
+        </p>
+      </div>
+
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-brand-muted">
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 rounded-full bg-brand-neon animate-pulse"></div>
+        <span class="font-medium text-gray-300">Авторская модель Ростислава Князева</span>
+        <span class="text-brand-muted/40">•</span>
+        <span>Ladder Risk System</span>
+      </div>
+      <div class="text-center sm:text-right text-[11px]">
+        <span>© Разработано специально для Ростислава Князева</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    // Lucide Icons initialization
+    lucide.createIcons();
+
+    // DOM Element References
+    const inputs = {
+      deposit: document.getElementById('deposit'),
+      baseRisk: document.getElementById('baseRisk'),
+      stepMultiplier: document.getElementById('stepMultiplier'),
+      stepsCount: document.getElementById('stepsCount'),
+      brokerPayout: document.getElementById('brokerPayout'),
+      winrate: document.getElementById('winrate'),
+      tradesPerMonth: document.getElementById('tradesPerMonth')
+    };
+
+    const elements = {
+      progressCircle: document.getElementById('progressCircle'),
+      circlePercent: document.getElementById('circlePercent'),
+      mainResultHeader: document.getElementById('mainResultHeader'),
+      mainResultSubtext: document.getElementById('mainResultSubtext'),
+      metricMaxLoss: document.getElementById('metricMaxLoss'),
+      metricBustProb: document.getElementById('metricBustProb'),
+      metricMonthlyEV: document.getElementById('metricMonthlyEV'),
+      ladderTableBody: document.getElementById('ladderTableBody'),
+      statSafetyMargin: document.getElementById('statSafetyMargin'),
+      statSeriesWinrate: document.getElementById('statSeriesWinrate'),
+      statMonthlyROI: document.getElementById('statMonthlyROI')
+    };
+
+    // Preset configurations
+    const PRESETS = {
+      conservative: { deposit: 1000, baseRisk: 0.2, stepMultiplier: 2, stepsCount: 5, brokerPayout: 92, winrate: 80, tradesPerMonth: 500 },
+      standard: { deposit: 1000, baseRisk: 0.4, stepMultiplier: 2, stepsCount: 5, brokerPayout: 92, winrate: 80, tradesPerMonth: 500 },
+      aggressive: { deposit: 1000, baseRisk: 1.0, stepMultiplier: 2, stepsCount: 4, brokerPayout: 92, winrate: 75, tradesPerMonth: 500 }
+    };
+
+    function applyPreset(presetKey) {
+      const preset = PRESETS[presetKey];
+      if (!preset) return;
+
+      Object.keys(preset).forEach(key => {
+        if (inputs[key]) {
+          inputs[key].value = preset[key];
+        }
+      });
+
+      calculateAndRender();
+      showToast(`Применён пресет: ${presetKey === 'conservative' ? 'Консервативный' : presetKey === 'standard' ? 'Стандартный' : 'Агрессивный'}`);
+    }
+
+    // Number Formatter helper
+    function formatCurrency(val, includeSign = false) {
+      const sign = includeSign && val > 0 ? '+' : '';
+      return sign + '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatPercent(val, decimals = 1) {
+      return Number(val).toFixed(decimals) + '%';
+    }
+
+    // Main Calculation Logic
+    function calculateAndRender() {
+      const deposit = Math.max(1, parseFloat(inputs.deposit.value) || 0);
+      const baseRisk = Math.max(0.01, parseFloat(inputs.baseRisk.value) || 0);
+      const stepMultiplier = Math.max(1, parseFloat(inputs.stepMultiplier.value) || 1);
+      const stepsCount = Math.min(10, Math.max(1, parseInt(inputs.stepsCount.value) || 1));
+      const brokerPayout = Math.max(1, parseFloat(inputs.brokerPayout.value) || 0);
+      const winrate = Math.min(99, Math.max(1, parseFloat(inputs.winrate.value) || 0));
+      const tradesPerMonth = Math.max(1, parseInt(inputs.tradesPerMonth.value) || 0);
+
+      // Step-by-step calculations
+      let cumulativeLoss = 0;
+      let ladderSteps = [];
+
+      for (let i = 1; i <= stepsCount; i++) {
+        let entryAmount = (i === 1) ? deposit * (baseRisk / 100) : ladderSteps[i - 2].entryAmount * stepMultiplier;
+        let entryPercent = (entryAmount / deposit) * 100;
+        
+        let cumulativeLossIfLoss = cumulativeLoss + entryAmount;
+        let depositRemainingIfLoss = Math.max(0, deposit - cumulativeLossIfLoss);
+
+        // Win calculation: Profit = (Entry * Payout%) - Cumulative Losses before this step
+        let grossPayout = entryAmount * (brokerPayout / 100);
+        let netProfitIfWin = grossPayout - cumulativeLoss;
+
+        ladderSteps.push({
+          step: i,
+          name: i === 1 ? 'Шаг 1 · основа' : `Шаг ${i} · перекрытие ${i - 1}`,
+          entryAmount: entryAmount,
+          entryPercent: entryPercent,
+          cumulativeLoss: cumulativeLossIfLoss,
+          depositRemaining: depositRemainingIfLoss,
+          netProfitIfWin: netProfitIfWin
+        });
+
+        cumulativeLoss += entryAmount;
+      }
+
+      const totalSeriesLoss = cumulativeLoss;
+      const totalSeriesLossPercent = (totalSeriesLoss / deposit) * 100;
+      const finalRemainingDeposit = Math.max(0, deposit - totalSeriesLoss);
+      const finalRemainingPercent = Math.max(0, (finalRemainingDeposit / deposit) * 100);
+
+      // Probability Calculations
+      const lossProbTrade = 1 - (winrate / 100);
+      const probSeriesBust = Math.pow(lossProbTrade, stepsCount); // Prob of losing N steps in a row
+      const probSeriesWin = 1 - probSeriesBust;
+
+      // Average trades taken per series
+      let avgTradesPerSeries = 0;
+      for (let k = 1; k <= stepsCount; k++) {
+        let probEndsAtK = Math.pow(lossProbTrade, k - 1) * (k === stepsCount ? 1 : (1 - lossProbTrade));
+        avgTradesPerSeries += k * probEndsAtK;
+      }
+
+      const totalSeriesInMonth = tradesPerMonth / (avgTradesPerSeries || 1);
+      
+      // EV per series
+      let expectedSeriesProfit = 0;
+      for (let k = 1; k <= stepsCount; k++) {
+        let probWinAtK = Math.pow(lossProbTrade, k - 1) * (1 - lossProbTrade);
+        expectedSeriesProfit += probWinAtK * ladderSteps[k - 1].netProfitIfWin;
+      }
+      expectedSeriesProfit -= probSeriesBust * totalSeriesLoss; // minus bust cost
+
+      const monthlyEV = totalSeriesInMonth * expectedSeriesProfit;
+      const monthlyROI = (monthlyEV / deposit) * 100;
+      const safetyMargin = totalSeriesLoss > 0 ? (deposit / totalSeriesLoss) : 0;
+
+      // Render SVG Progress Donut Circle (Radius 58 -> Circumference ~ 364.4)
+      const circumference = 364.4;
+      const safePercent = Math.min(100, Math.max(0, finalRemainingPercent));
+      const dashoffset = circumference - (safePercent / 100) * circumference;
+      elements.progressCircle.style.strokeDashoffset = dashoffset;
+      elements.circlePercent.textContent = `${Math.round(safePercent)}%`;
+
+      // Main Text Render
+      elements.mainResultHeader.innerHTML = `
+        После <span class="text-brand-neon font-mono">${stepsCount}</span> ${getPluralLosses(stepsCount)} подряд останется <span class="text-brand-neon font-mono neon-text-glow">${formatCurrency(finalRemainingDeposit)}</span>
+      `;
+
+      elements.mainResultSubtext.innerHTML = `
+        Суммарный убыток серии — <span class="text-white font-semibold">${formatCurrency(totalSeriesLoss)} (${formatPercent(totalSeriesLossPercent)})</span>. После прибыльного закрытия любого шага или достижения лимита серия завершается; её итог записываем отдельно.
+      `;
+
+      // Micro Metrics
+      elements.metricMaxLoss.textContent = formatCurrency(totalSeriesLoss);
+      elements.metricBustProb.textContent = (probSeriesBust * 100) < 0.001 ? '< 0.001%' : formatPercent(probSeriesBust * 100, 3);
+      elements.metricMonthlyEV.textContent = formatCurrency(monthlyEV, true);
+
+      // Advanced Analytics Cards
+      elements.statSafetyMargin.textContent = `${safetyMargin.toFixed(1)} серий`;
+      elements.statSeriesWinrate.textContent = formatPercent(probSeriesWin * 100, 3);
+      elements.statMonthlyROI.textContent = (monthlyROI > 0 ? '+' : '') + formatPercent(monthlyROI, 1);
+
+      // Render Ladder Steps Table
+      elements.ladderTableBody.innerHTML = '';
+      
+      // Find max entry percent to normalize visual step bars
+      const maxEntryPercent = Math.max(...ladderSteps.map(s => s.entryPercent), 1);
+
+      ladderSteps.forEach((s) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-brand-card-hover/80 transition-colors group';
+
+        const barWidth = Math.min(100, (s.entryPercent / maxEntryPercent) * 100);
+
+        row.innerHTML = `
+          <td class="py-3.5 px-3 font-semibold text-white group-hover:text-brand-neon transition-colors">
+            ${s.name}
+          </td>
+          <td class="py-3.5 px-3 text-right sm:text-left">
+            <span class="text-white font-bold">${formatCurrency(s.entryAmount)}</span>
+            <span class="text-brand-muted text-xs block sm:inline sm:ml-1 font-normal">${formatPercent(s.entryPercent, 1)}</span>
+          </td>
+          <td class="py-3.5 px-3 hidden md:table-cell align-middle">
+            <div class="w-full bg-brand-input rounded-full h-2 overflow-hidden border border-white/5">
+              <div class="bg-gradient-to-r from-brand-neonDark to-brand-neon h-full rounded-full transition-all duration-300" style="width: ${barWidth}%"></div>
+            </div>
+          </td>
+          <td class="py-3.5 px-3 text-right text-brand-muted">
+            остаток <span class="text-white font-semibold">${formatCurrency(s.depositRemaining)}</span>
+          </td>
+          <td class="py-3.5 px-3 text-right font-bold ${s.netProfitIfWin >= 0 ? 'text-brand-neon' : 'text-brand-red'}">
+            ${formatCurrency(s.netProfitIfWin, true)}
+          </td>
+        `;
+
+        elements.ladderTableBody.appendChild(row);
+      });
+    }
+
+    // Helper for correct Russian plural forms
+    function getPluralLosses(n) {
+      if (n % 10 === 1 && n % 100 !== 11) return 'убытка';
+      return 'убытков';
+    }
+
+    // Clipboard copy functionality
+    function copySummary() {
+      const header = elements.mainResultHeader.innerText.replace(/\s+/g, ' ');
+      const subtext = elements.mainResultSubtext.innerText.replace(/\s+/g, ' ');
+      
+      const textToCopy = `📊 РЕЗУЛЬТАТ РАСЧЁТА ЛЕСТНИЦЫ | РОСТИCЛАВ КНЯЗЕВ\n------------------------------------------------\n${header}\n${subtext}\n\nОжидаемый EV в месяц: ${elements.metricMonthlyEV.innerText}\nВероятность слива серии: ${elements.metricBustProb.innerText}`;
+
+      // ExecCommand fallback for iframe environments
+      const tempTextArea = document.createElement('textarea');
+      tempTextArea.value = textToCopy;
+      document.body.appendChild(tempTextArea);
+      tempTextArea.select();
+      
+      try {
+        document.execCommand('copy');
+        showToast('Результат скопирован в буфер обмена!');
+      } catch (err) {
+        showToast('Не удалось скопировать.');
+      }
+      
+      document.body.removeChild(tempTextArea);
+    }
+
+    // Toast Notification helper
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      toastMsg.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // Event Listeners for real-time calculation
+    Object.values(inputs).forEach(input => {
+      input.addEventListener('input', calculateAndRender);
+      input.addEventListener('change', calculateAndRender);
+    });
+
+    // Initial Calculation on Page Load
+    window.onload = function() {
+      calculateAndRender();
+    };
+  </script>
+</body>
+</html>
